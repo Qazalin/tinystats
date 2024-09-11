@@ -70,54 +70,58 @@ function main() {
     }
 
     if ("benchmarks" in data) {
-      console.log(data);
-      // generate integer only chart ticks for the x axis
-      const x_ticks = [];
-      let lowest_x = Infinity;
-      let highest_x = -Infinity;
-      for (const benchmark of data.benchmarks) {
-        if (benchmark.length == 0) continue;
-        if (benchmark[0].x < lowest_x) {
-          lowest_x = benchmark[0].x;
-        }
-        if (benchmark[benchmark.length - 1].x > highest_x) {
-          highest_x = benchmark[benchmark.length - 1].x;
-        }
-      }
-      const low = Math.floor(lowest_x / 10) * 10;
-      const high = Math.ceil(highest_x / 10) * 10;
-      const divisor = (high - low) / 10;
-      for (let i = low; i < high; i += divisor) {
-        const i_10 = i;
-        if (i_10 < lowest_x || i_10 > highest_x) continue;
-        x_ticks.push(i_10);
-      }
+      fetch(`http://localhost:8000/stats?filename=${data.filename}`).then((res) => {
+        res.json().then((ret) => {
+          const [data, commits] = ret;
+          // generate integer only chart ticks for the x axis
+          const x_ticks = [];
+          let lowest_x = Infinity;
+          let highest_x = -Infinity;
+          for (const benchmark of data.benchmarks) {
+            if (benchmark.length == 0) continue;
+            if (benchmark[0].x < lowest_x) {
+              lowest_x = benchmark[0].x;
+            }
+            if (benchmark[benchmark.length - 1].x > highest_x) {
+              highest_x = benchmark[benchmark.length - 1].x;
+            }
+          }
+          const low = Math.floor(lowest_x / 10) * 10;
+          const high = Math.ceil(highest_x / 10) * 10;
+          const divisor = (high - low) / 10;
+          for (let i = low; i < high; i += divisor) {
+            const i_10 = i;
+            if (i_10 < lowest_x || i_10 > highest_x) continue;
+            x_ticks.push(i_10);
+          }
 
-      // modify data if we want 1 over data
-      //if (data.filename.includes("llama")) {
-      //  for (const benchmark of data.benchmarks) {
-      //    for (const point of benchmark) {
-      //      point.y = 1 / point.y * 1000;
-      //      point.y = Math.round(point.y * 100) / 100;
-      //    }
-      //  }
-      //}
+          // modify data if we want 1 over data
+          //if (data.filename.includes("llama")) {
+          //  for (const benchmark of data.benchmarks) {
+          //    for (const point of benchmark) {
+          //      point.y = 1 / point.y * 1000;
+          //      point.y = Math.round(point.y * 100) / 100;
+          //    }
+          //  }
+          //}
 
-      // update chart
-      charts[`${data.filename}-${data.system}`].update({
-        series: data.benchmarks,
-      }, {
-        showPoint: true,
-        showLine: true,
-        showArea: true,
-        lineSmooth: false,
-        axisX: {
-          type: Chartist.FixedScaleAxis,
-          ticks: x_ticks,
-          high: highest_x,
-          low: lowest_x,
-        },
-      });
+          // update chart
+          charts[`${data.filename}-${data.system}`].update({
+            series: data.benchmarks,
+          }, {
+            showPoint: true,
+            showLine: true,
+            showArea: true,
+            lineSmooth: false,
+            axisX: {
+              type: Chartist.FixedScaleAxis,
+              ticks: x_ticks,
+              high: highest_x,
+              low: lowest_x,
+            },
+          });
+            })
+      })
     } else if ("curr-commit" in data) {
       const lastUpdated = document.querySelector("#last-updated");
       lastUpdated.textContent = new Date(Date.now() - lastUpdateTime)
@@ -133,8 +137,10 @@ function main() {
       reload_charts();
       socket.send("get-run-commit-map");
     } else if ("run-commit-map" in data) {
-      runCommitMap = data["run-commit-map"];
-      console.log(runCommitMap);
+        fetch(`http://localhost:8000/stats?filename=llama_unjitted.txt`).then((res) => {
+          res.json().then((ret) => {
+            runCommitMap = ret[1]
+          })})
     }
   };
 
